@@ -1,0 +1,40 @@
+Always use file scoped namespaces. Always combine attributes on a single line when possible. 
+The project does not use nullable reference types. 
+There is a GlobalUsings.cs file that includes common usings, don't include using statements in new files if they are already in the globalusings.cs file.
+I prefer expression bodied members when possible. Single line if statements should still use braces. Use ternary operators when appropriate. 
+Use internal over private. All classes and methods are public unless told otherwise. Don't add a constructor unless instructed to do so. 
+Use primary constructors when possible and don't declare a class level variable if the parameter from the constructor can be used.
+Don't initialize properties unless instructed to do so.
+
+All work is to be done in the Autolot.API project unless otherwise specified.
+
+When adding attributes, keep the ApiVersion attribute at the top, following by the HTTP Verb attribute, then followed by route attributes (if any), then documentation attributes.
+Add each attribute on it's own line.
+
+Add the following global usings to the GlobalUsings.cs file if it does not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using System.ComponentModel;
+
+Add the following attribute to all controller action methods (even if deprecated) that do not currently have a Produces attribute:
+[Produces("application/json")]
+
+Add the following attributes to all controller action methods (even if deprecated) that do not currently have them:
+[ProducesResponseType(StatusCodes.Status200OK)]
+[ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+
+Add the following attribute to all controller action methods (even if deprecated) that return a 201 Created response:
+[ProducesResponseType(StatusCodes.Status201Created)]
+
+Add the following attribute to all controller action methods (even if deprecated) that return a 204 No Content response:
+[ProducesResponseType(StatusCodes.Status204NoContent)]
+
+Add the following attributes to all action methods on all controllers:
+[EndpointSummary(summary of the endpoint)]
+[EndpointDescription(longer description of the endpoint, followed by an example, followed by the JSON required in the request body (if applicable))]
+
+Add the following attribute to all parameters on all action methods on all controllers (even if deprecated) unless the parameter is an interface:
+Description - description of the parameter and if it's required or not (required == not nullable or marked with required attribute)
+
+The following work is to be done in the AutoLot.Models project:
+Add /// XML comments to the entity classes (BaseEntity, Car, CarDriver, Driver, Make, Model, Radio) all public properties. Make sure the comments come before any existing attributes.
+Include <summary>, <remarks>.
+

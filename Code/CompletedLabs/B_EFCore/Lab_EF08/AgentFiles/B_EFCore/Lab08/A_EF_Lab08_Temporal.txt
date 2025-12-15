@@ -1,0 +1,34 @@
+Always use file scoped namespaces. Always combine attributes on a single line when possible. 
+The project does not use nullable reference types. 
+There is a GlobalUsings.cs file that includes common usings, don't include using statements in new files if they are already in the globalusings.cs file.
+I prefer expression bodied members when possible. Single line if statements should still use braces. Use ternary operators when appropriate. 
+Use internal over private. All classes and methods are public unless told otherwise. Don't add a constructor unless instructed to do so. 
+Use primary constructors when possible and don't declare a class level variable if the parameter from the constructor can be used.
+Don't initialize properties unless instructed to do so.
+
+In the AutoLot.Models project, update the Configuration files for Car, CarDriver, Driver, Make, and Radio to include temporal table configuration.
+Use ValidTo and ValidFrom as the period columns. Name the history tables dbo.[EntityName]Audit, for example, dbo.DriversAudit. 
+Except for Car, name it InventoryAudit, and CarDriver, name it InventoryToDriversAudit.
+
+In the AutoLot.Models project, add a new class to the ViewModels folder named TemporalViewModel.cs that is generic, 
+constrained to BaseEntity, new(), and contains the following public properties:
+Entity (T)
+ValidFrom (datetime)
+ValidTo (datetime)
+
+In the AutoLot.Dal project, add a new interface named ITemporalTableBaseRepo.cs into the Repos\Interfaces\Base directory. Have it inherit from IBaseRepo<T> with the same constraints Add the following methods:
+  IQueryable<TemporalViewModel<T>> GetAllHistory();
+  IQueryable<TemporalViewModel<T>> GetHistoryAsOf(DateTime dateTime);
+  IQueryable<TemporalViewModel<T>> GetHistoryBetween(DateTime startDateTime, DateTime endDateTime);
+  IQueryable<TemporalViewModel<T>> GetHistoryContainedIn(DateTime startDateTime, DateTime endDateTime);
+  IQueryable<TemporalViewModel<T>> GetHistoryFromTo(DateTime startDateTime, DateTime endDateTime);
+
+
+In the AutoLot.Dal project, add a new class named TemporalTableBaseRepo.cs into the Repos\Base directory. Have it inherit from BaseRepo<T> with the same constraints, and implement ITemporalTableBaseRepo. Implement all of the interfaces methods using the ConvertToUtc helper. Add an internal helper method named
+ConvertToUtc that takes a date time and uses TimeXZoneInfo to convert the time passed in. Add another internal method named ExecuteQuery that takes an IQueryable<T>, ordered by "ValidFrom", and project that into a new instance if TemporalViewModel.
+
+In the AutoLot.Dal project, update the following Interfaces to inherit from ITemporalTableBaseRepo instead of IBaseRepo:
+  ICarRepo,  ICarDriverRepo, IDriverRepo, IMakeRepo, IRadioRepo
+
+In the AutoLot.Dal project, update the following Repos to inherit from TemporalTableBaseRepo instead of BaseRepo:
+  CarRepo, CarDriverRepo, DriverRepo, MakeRepo, RadioRepo

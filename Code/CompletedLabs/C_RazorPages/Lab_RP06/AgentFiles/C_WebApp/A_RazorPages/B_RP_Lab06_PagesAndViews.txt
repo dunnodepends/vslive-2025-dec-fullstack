@@ -1,0 +1,207 @@
+Always use file scoped namespaces. Always combine attributes on a single line when possible. 
+The project does not use nullable reference types. 
+There is a GlobalUsings.cs file that includes common usings, don't include using statements in new files if they are already in the globalusings.cs file.
+I prefer expression bodied members when possible. Single line if statements should still use braces. Use ternary operators when appropriate. 
+Use internal over private. All classes and methods are public unless told otherwise. 
+Use primary constructors when possible and don't declare a class level variable if the parameter from the constructor can be used. 
+
+All work is to be done in the AutoLot.Web project unless otherwise specified.
+
+Add the following global usings to the GlobalUsings.cs file if they do not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using AutoLot.Dal.Repos.Base;
+global using AutoLot.Dal.Repos.Interfaces.Base;
+global using AutoLot.Models.Entities;
+global using AutoLot.Models.Entities.Base;
+global using Microsoft.AspNetCore.Mvc.Rendering;
+
+In the Pages folder, add a new folder named Base and add a new public abstract class named BasePageModel that inherits from PageModel. 
+Make it generic with TEntity, constrained to BaseEntity, new(). 
+Accept three parameters in the constructor, IAppLogging (appLoggingInstance) and IBaseRepo<TEntity> (baseRepoInstance) and string pageTitle. 
+Assign the first parameters to two protected readonly properties named AppLoggingInstance and BaseRepoInstance, respectively. 
+Assign the pageTitle to a public property {get; init:} named Title with the ViewData attribute.
+Add a public property named Entity of type TEntity with get and set accessors and the BindProperty attribute.
+Add the following public properties:
+SelectList LookupValues {get; set;}
+string Error {get; set;}
+Add a protected virtual method named GetLookupValues (input:none. return type: void) that sets the LookupValues to null.
+Add the four Crud methods:
+protected virtual void GetOne Entity (input:int? id. Logic: if  id is null, make Entity null and Error = "Invalid Request". Then return.
+Otherwise assign Entity to the result of calling Find on BaseRepoInstance with id. If returned value is null, set Error = "Not found", else Error = string.Empty)
+protected virtual IActionResult SaveOne (intput: Func<TEntity,bool,TEntity> saveFunction. Logic: if ModelState is not valid, return Page(). 
+If it is valid, call saveFunction passing in true for persist. After saving the record, redirect to Details page)
+protected virtual IActionResult SaveOneWithLookup (intput: Func<TEntity,bool,TEntity> saveFunction. Logic: if ModelState is not valid, call GetLookupValues() and return Page(). 
+If it is valid, call saveFunction passing in true for persist. After saving the record, redirect to Details page)
+protected virtual IActionResult DeleteOne (input: int id. Logic: Call Delete on BaseRepoInstance with Entity then redirect to Index)
+
+Add the following global usings to the GlobalUsings.cs file if they do not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using AutoLot.Web.Pages.Base;
+
+In the Pages/Cars folder, update the IndexModel class to inherit from BasePageModel with TEntity as Car, ICarRepo, and "Inventory" as pageTitle.
+Add a new property named CarRecords of type IList<Car> with get and set accessors. Update the OnGet method to:
+If makeId does not have a value, assign "All Makes" to MakeName CarRecords to the result of 
+calling GetAllIgnoreQueryFilters on BaseRepoInstance
+If makeId does have a value, set MakeName from the parameter and call GetAllBy and assign the records returned to CarRecords.
+
+update the Index page View to the following:
+@page "{makeId?}/{makeName?}"
+@model AutoLot.Web.Pages.Cars.IndexModel
+@{ 
+  if (Model.MakeId.HasValue)
+  {
+    <h1>Vehicle Inventory for @Model.MakeName</h1>
+    var mode = new ViewDataDictionary(ViewData) { { "ByMake", true } };
+    <partial name="Partials/_CarList" model="@Model.CarRecords" view-data="@mode" />
+  }
+  else
+  {
+    <h1>Vehicle Inventory</h1>
+    <partial name="Partials/_CarList" model="@Model.CarRecords" />
+  }
+}
+
+In the Pages/Cars folder, add a new Razor Page named Details that inherits from BasePageModel with TEntity as Car, ICarRepo, and "Details" as pageTitle.
+Update the OnGet method to accept int? id and the following logic:
+If id does not have a value, set Entity to null and Error to "Invalid Request". 
+If it does have a value, assign Entity to the result of calling GetOneEntity with id. 
+If the result is null, set Error to "Not found", else set Error to string.Empty.
+
+Update the Details page View to the following:
+@page "{id?}"
+@model AutoLot.Web.Pages.Cars.DetailsModel
+
+<h1>Details for @Model.Entity.PetName</h1>
+@if (!string.IsNullOrEmpty(Model.Error))
+{
+  <div class="alert alert-danger" role="alert">
+    @Model.Error
+  </div>
+}
+else
+{
+  @Html.DisplayFor(m => m.Entity)
+  <hr/>
+  @Html.DisplayFor(m => m.Entity, "CarWithColors")
+  <div>
+    <item-edit item-id="@Model.Entity.Id"></item-edit> |
+    <item-delete item-id="@Model.Entity.Id"></item-delete> |
+    <item-list></item-list>
+  </div>
+}
+
+In the Pages/Cars folder, add a new Razor Page named Delete that inherits from BasePageModel with TEntity as Car, ICarRepo, and "Delete" as pageTitle.
+Update the OnGet method to accept int? id and the following logic:
+If id does not have a value, set Entity to null and Error to "Invalid Request".  Then return.
+If it does have a value, assign Entity to the result of calling GetOne on the base class with id. 
+If the result is null, set Error to "Not found", else set Error to string.Empty.
+Add an OnPost method to accept int id and the following logic:
+If id does not match the Id of the Entity, set Error to "Invalid Request". 
+Call DeleteOne on the base class, set the Error to string.Empty and Entity to null.
+
+
+Update the Delete page View to the following:
+@page "{id?}"
+@model AutoLot.Web.Pages.Cars.DeleteModel
+
+<h1>Delete @Model.Entity.PetName</h1>
+@if (!string.IsNullOrEmpty(Model.Error))
+{
+  <div class="alert alert-danger" role="alert">
+    @Model.Error
+  </div>
+}
+else
+{
+  <h3>Are you sure you want to delete this car?</h3>
+  <div>
+    @Html.DisplayFor(c=>c.Entity)
+    <form asp-page="Delete" asp-route-id="@Model.Entity.Id">
+      <input type="hidden" asp-for="Entity.Id"/>
+      <input type="hidden" asp-for="Entity.TimeStamp"/>
+      <button type="submit" class="btn btn-danger">
+         Delete <i class="fa-solid fa-trash"></i>
+      </button>&nbsp;&nbsp;|&nbsp;&nbsp;
+      <item-list></item-list>
+    </form>
+  </div>
+}
+
+In the Pages/Cars folder, add a new Razor Page named Edit that inherits from BasePageModel with TEntity as Car, ICarRepo, and "Edit" as pageTitle. 
+Also add in IMakeRepo as a constructor parameter. Do not assign it to a class level variable.
+Update the OnGet method to accept int? id and the following logic:
+If id does not have a value, set Entity to null and Error to "Invalid Request". Then return.
+If it does have a value, assign Entity to the result of calling GetOne with id and GetLookupValues() (both from the base class). 
+If the result is null, set Error to "Not found", else set Error to string.Empty.
+Add an OnPost method to accept int id and the following logic:
+If id does not match the Id of the Entity, set Error to "Invalid Request". 
+Call SaveOneWithLookup(BaseRepoInstance.Update), then set the Error to string.Empty.
+Add an override for GetLookupValues that creates a SelectList from calling GetAll on the MakeRepo instance sorted by Name, nameof(Make.Id) as the value, nameof(Make.Name) as the text, 
+and assign the result it to LookupValues.
+
+
+Update the Edit page View to the following:
+@page "{id?}"
+@model AutoLot.Web.Pages.Cars.EditModel
+<h1>Edit @Model.Entity.PetName</h1>
+<hr/>
+@if (!string.IsNullOrEmpty(Model.Error))
+{
+  <div class="alert alert-danger" role="alert"> @Model.Error </div>
+}
+else
+{
+  <form asp-page="Edit" asp-route-id="@Model.Entity.Id">
+    <div class="row">
+      <div class="col-md-4">
+        <div asp-validation-summary="ModelOnly"></div>
+          @Html.EditorFor(x => x.Entity, new { LookupValues = Model.LookupValues })
+          <input type="hidden" asp-for="Entity.Id"/>
+          <input type="hidden" asp-for="Entity.TimeStamp"/>
+        </div>
+      </div>
+      <div class="d-flex flex-row mt-3">
+        <button type="submit" class="btn btn-primary">Save 
+          <i class="fa-solid fa-save"></i></button>&nbsp;&nbsp;|&nbsp;&nbsp;
+        <item-list></item-list>
+    </div>
+  </form>
+}
+@section Scripts {
+  @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}
+
+In the Pages/Cars folder, add a new Razor Page named Create that inherits from BasePageModel with TEntity as Car, ICarRepo, and "Create" as pageTitle. 
+Also add in IMakeRepo as a constructor parameter. Do not assign it to a class level variable.
+Update the OnGet method to call GetLookupValues() and set Entity to a new Car instance with IsDrivable set to true.
+Add an OnPost method to Call SaveOneWithLookup(BaseRepoInstance.Add), and return the result.
+Add an override for GetLookupValues that creates a SelectList from calling GetAll on the MakeRepo instance sorted by Name, nameof(Make.Id) as the value, nameof(Make.Name) as the text, 
+and assign the result it to LookupValues.
+
+
+Update the Edit page View to the following:
+@page
+@model AutoLot.Web.Pages.Cars.CreateModel
+<h1>Create a New Car</h1>
+<hr />
+@if (!string.IsNullOrEmpty(Model.Error))
+{
+  <div class="alert alert-danger" role="alert"> @Model.Error </div>
+}
+else
+{
+  <form asp-page="Create" asp-page-handler="CreateNewCar">
+    <div class="row">
+      <div class="col-md-4">
+         <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            @Html.EditorFor(x => x.Entity, new { LookupValues = Model.LookupValues })
+         </div>
+      </div>
+      <div class="d-flex flex-row mt-3">
+        <button type="submit" class="btn btn-success">Create 
+          <i class="fa-solid fa-plus"></i></button>&nbsp;&nbsp;|&nbsp;&nbsp;
+        <item-list></item-list>
+      </div>
+  </form>
+  @section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+  }
+}

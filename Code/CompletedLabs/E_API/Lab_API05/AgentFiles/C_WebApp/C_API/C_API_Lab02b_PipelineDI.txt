@@ -1,0 +1,156 @@
+Always use file scoped namespaces. Always combine attributes on a single line when possible. 
+The project does not use nullable reference types. 
+There is a GlobalUsings.cs file that includes common usings, don't include using statements in new files if they are already in the globalusings.cs file.
+I prefer expression bodied members when possible. Single line if statements should still use braces. Use ternary operators when appropriate. 
+Use internal over private. All classes and methods are public unless told otherwise. Don't add a constructor unless instructed to do so. 
+Use primary constructors when possible and don't declare a class level variable if the parameter from the constructor can be used.
+Don't initialize properties unless instructed to do so.
+
+All work is to be done in the Autolot.API project.
+
+The following is all done in Program.cs
+
+Add the following after the call to CreateBuilder:
+
+builder.ConfigureSerilog();
+builder.Services.RegisterLoggingInterfaces();
+
+Add the following after AddControllers():
+builder.Services.AddScoped<ICarDriverRepo, CarDriverRepo>();
+builder.Services.AddScoped<ICarRepo, CarRepo>();
+builder.Services.AddScoped<IDriverRepo, DriverRepo>();
+builder.Services.AddScoped<IMakeRepo, MakeRepo>();
+builder.Services.AddScoped<IRadioRepo, RadioRepo>();
+
+var connectionString = builder.Configuration.GetConnectionString("AutoLot");
+builder.Services.AddDbContextPool<ApplicationDbContext>(
+  options =>
+  {
+    options.ConfigureWarnings(wc => wc.Ignore(RelationalEventId.BoolWithDefaultWarning));
+    options.UseSqlServer(connectionString,
+      sqlOptions => sqlOptions.EnableRetryOnFailure().CommandTimeout(60));
+  });
+
+Update the call to AddControllers to add customize the JSON handling, add DI validation, and customize the API behavior:
+  builder.Services.AddControllers()
+  .AddJsonOptions(options =>
+  {
+    options.JsonSerializerOptions.PropertyNamingPolicy = null;
+    options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    options.JsonSerializerOptions.WriteIndented = true;
+    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+  }) 
+  .AddControllersAsServices()
+  .ConfigureApiBehaviorOptions(options =>
+  {
+    //suppress automatic model state binding errors
+    options.SuppressModelStateInvalidFilter = true;
+    //suppress all binding inference
+    //options.SuppressInferBindingSourcesForParameters= true;
+    //suppress multipart/form-data content type inference
+    //options.SuppressConsumesConstraintForFormFileParameters = true;
+    //Don't create a problem details error object if set to true
+    options.SuppressMapClientErrors = false;
+    options.ClientErrorMapping[StatusCodes.Status404NotFound].Link = "https://httpstatuses.com/404";
+    options.ClientErrorMapping[StatusCodes.Status404NotFound].Title = "Invalid location";
+  }); 
+
+
+builder.Host.UseDefaultServiceProvider(o =>
+{
+  o.ValidateOnBuild = true;
+  o.ValidateScopes = true;
+});
+
+Add the CORS policy to the services collection:
+builder.Services.AddCors(options =>
+{
+  options.AddPolicy("AllowAll", pb =>
+  {
+    pb
+      .AllowAnyHeader()
+      .AllowAnyMethod()
+      .AllowAnyOrigin();
+  });
+});
+
+
+
+In the section after builder.Build() in the IsDevelopment if block add the code to initialize the database like this:
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+  if (app.Configuration.GetValue<bool>("RebuildDataBase"))
+  {
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    SampleDataInitializer.ClearAndReseedDatabase(dbContext);
+  }
+}
+
+Add the code to UseCors:
+app.UseCors("AllowAll");
+
+All work is to be done in the Autolot.Api project.
+Add a new folder named Filters. Add a new class named CustomExceptionFilterAttribute.cs in the Filters directory and update the code to match the following:
+namespace AutoLot.Api.Filters;
+public class CustomExceptionFilterAttribute(IWebHostEnvironment hostEnvironment) : ExceptionFilterAttribute
+{ 
+  public override void OnException(ExceptionContext context)
+  {
+    var ex = context.Exception;
+    string stackTrace = hostEnvironment.IsDevelopment() ? context.Exception.StackTrace : string.Empty;
+    string message = ex.Message;
+    string error;
+    IActionResult actionResult;
+    switch (ex)
+    {
+      case DbUpdateConcurrencyException ce:
+        //Returns a 400
+        error = "Concurrency Issue.";
+        actionResult = new BadRequestObjectResult(new { Error = error, Message = message, StackTrace = stackTrace });
+        break;
+      default:
+        error = "General Error.";
+        actionResult = new ObjectResult(
+          new { Error = error, Message = message, StackTrace = stackTrace })
+          {
+            StatusCode = 500
+          };
+          break;
+    }
+    context.Result = actionResult;
+  }
+}
+
+Add the following global usings to the GlobalUsings.cs file if it does not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using AutoLot.Api.Filters;
+
+The following work is to be done in the Program.cs class. Update the AddControllers method to add the filter:
+builder.Services.AddControllers(
+  config => config.Filters.Add(new CustomExceptionFilterAttribute(builder.Environment))
+)
+
+Add a new API Controller named ValuesController to the Controllers folder, and update the code to the following:
+namespace AutoLot.Api.Controllers;
+[Route("api/[controller]")]
+[ApiController]
+public class ValuesController(IAppLogging appLogging) : ControllerBase
+{
+  [HttpGet("problem")]
+  public IActionResult Problem() => NotFound();
+
+  [HttpGet("logging")]
+  public IActionResult TestLogging()
+  {
+    logger.LogAppError("Test error");
+    return Ok();
+  }
+
+  [HttpGet("error")]
+  public IActionResult TestExceptionHandling()
+  {
+    throw new Exception("Test Exception");
+  }
+
+}

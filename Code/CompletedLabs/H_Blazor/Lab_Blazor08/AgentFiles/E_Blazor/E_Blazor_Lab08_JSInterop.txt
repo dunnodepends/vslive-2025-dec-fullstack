@@ -1,0 +1,173 @@
+Always use file scoped namespaces. Always combine attributes on a single line when possible. The project does not use nullable reference types. 
+If there is a GlobalUsings.cs file, don't include using statements in new files if they are already in the globalusings.cs file.
+I prefer expression bodied members when possible. Single line if statements should still use braces. Use ternary operators when appropriate. 
+Use internal over private. All classes and methods are public unless told otherwise. Don't add a constructor unless instructed to do so. 
+Use primary constructors when possible and don't declare a class level variable if the parameter from the constructor can be used.
+Don't initialize properties unless instructed to do so. The @code block in razor components should be at the bottom of the file.
+
+All work is to be done in the AutoLot.Blazor project unless otherwise specified.
+
+Create a new class named StateData.cs in the ViewModels folder of the AutoLot.Blazor.Models project. Add the following public properties:
+Value (string)
+Length (int)
+Timestamp (DateTime)
+
+Create a new folder named Storage in the Services folder. In this folder, add a new folder named Interfaces. 
+In this folder, add a public interface named IBrowserStorageService.cs. Make the interface generic with TItem as the parameter.
+Add the following method signatures to the interface:
+  SetItemAsync(inputs: string key, TItem item; returns Task)
+  GetItemAsync (inputs: string key; returns Task<TITem>)
+
+Add the following to the GlobalUsings.cs file (don't remove any existing entries):
+global using AutoLot.Blazor.Services.Storage;
+global using AutoLot.Blazor.Services.Storage.Interfaces;
+global using Microsoft.JSInterop;
+global using System.Text.Json;
+
+Add a new class named LocalStorageService.cs in the Services\Storage directory, inherit from IBrowserStorage, and take an instance of IJSRuntime in the primary constructor.
+Implement the interface methods as follows:
+  public async Task SetItemAsync(string key, TItem item)
+  {
+    await jsRuntime.InvokeVoidAsync(
+      "skimedicInterop.setLocalStorage", key, JsonSerializer.Serialize(item));
+  }
+  public async Task<TItem> GetItemAsync (string key)
+  {
+    var json = await jsRuntime.InvokeAsync<string>("skimedicInterop.getLocalStorage", key);
+    return json == null ? default : JsonSerializer.Deserialize<TItem>(json);
+  }
+
+Add a new class named LocalStorageService.cs in the Services\Storage directory, inherit from IBrowserStorage, and take an instance of IJSRuntime in the primary constructor.
+Implement the interface methods as follows:
+  public async Task SetItemAsync(string key, T item)
+  {
+    await jsRuntime.InvokeVoidAsync(
+      "skimedicInterop.setSessionStorage", key, JsonSerializer.Serialize(item));
+  }
+  public async Task<TItem> GetItemAsync(string key)
+  {
+    var json = await jsRuntime.InvokeAsync<string>("skimedicInterop.getSessionStorage", key);
+    return json == null ? default : JsonSerializer.Deserialize<TItem>(json);
+  }
+
+Add the following to Program.cs to add the services as Keyed dependencies (don't remove any existing entries):
+builder.Services.AddKeyedScoped(typeof(IBrowserStorageService<>),nameof(LocalStorageService<>),typeof(LocalStorageService<>));
+builder.Services.AddKeyedScoped(typeof(IBrowserStorageService<>),nameof(SessionStorageService<>),typeof(SessionStorageService<>));
+
+Add a new Razor component named StorageExample.razor to the Shared folder. Clear out the contents and update it to the following:
+<h3>@Title</h3>
+@FieldDisplayName:
+<input type="text" @bind-value="_data" size="25" /><hr />
+<button @onclick="SaveToLocalStorageAsync">Save to @StorageType Storage</button>
+<button @onclick="ReadFromLocalStorageAsync">Read from @StorageType Storage</button>
+<div class="mt-4">@_message</div>
+@code {
+  private string _data;
+  private string _message;
+  [Parameter]
+  [EditorRequired]
+  public string Title { get; set; }
+  [Parameter]
+  [EditorRequired]
+  public string FieldDisplayName { get; set; }
+  [Parameter]
+  [EditorRequired]
+  public string StorageType { get; set; }
+  [Parameter]
+  [EditorRequired]
+  public EventCallback<string> OnDataReturnedCallback { get; set; }
+  [Parameter]
+  [EditorRequired]
+  public IBrowserStorageService<StateData> StorageService { get; set; }
+  async Task SaveToLocalStorageAsync()
+  {
+    var dataInfo = new StateData()
+      {
+        Value = _data,
+        Length = _data!.Length,
+        Timestamp = DateTime.Now
+      };
+    await StorageService!.SetItemAsync("localStorageData", dataInfo);
+    _message = "Saved";
+  }
+  async Task ReadFromLocalStorageAsync()
+  {
+    StateData savedData = await StorageService!.GetItemAsync("localStorageData");
+    string result = $"localStorageData = {savedData?.Value ?? "Missing"}";
+    await OnDataReturnedCallback.InvokeAsync(result);
+    _message = "";
+  }
+}
+
+Add a new Razor component named StateManagement.razor to the Pages folder. Clear out the contents and update it to the following:
+@page "/state-management"
+<PageTitle>State Management</PageTitle>
+<h1>State Management</h1>
+<StorageExample Title=" Local Storage (Browser - Persisted)"
+  FieldDisplayName="Local Storage Data (enter something to save)"
+  StorageType="local"
+  StorageService="LocalService"
+  OnDataReturnedCallback="@(async (value) => { await Task.Yield(); await ShowData(value); })">
+</StorageExample>
+<StorageExample Title=" Session Storage (Browser Tab - Transient)"
+  FieldDisplayName="Session Storage Data (enter something to save)"
+  StorageType="session"
+  StorageService="SessionService"
+  OnDataReturnedCallback="@(async (value) => { await Task.Yield(); await ShowData(value); })">
+</StorageExample>
+@code {
+  [Inject]
+  private IJSRuntime JsRuntime { get; set; }
+  private IJSObjectReference _module;
+  //scoped to browser window
+  [Inject(Key = nameof(LocalStorageService<>))]
+  private IBrowserStorageService<StateData> LocalService { get; set; }
+  //scoped to browser tab
+  [Inject(Key = nameof(SessionStorageService<>))]
+  private IBrowserStorageService<StateData> SessionService { get; set; }
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender)
+    {
+      _module = await JsRuntime.InvokeAsync<IJSObjectReference>
+        ("import", "./Pages/StateManagement.razor.js");
+    }
+  }
+  async Task ShowData(string message)
+  {
+    if (_module is not null)
+    {
+      await _module.InvokeVoidAsync("showStorageData", message);
+    }
+  }
+}
+
+Add a new JavaScript file named StateManagement.razor.js.into the Pages directory. Update the code to the following:
+export function showStorageData(data) {
+  alert(data);
+}
+
+Add a new folder named js under the wwwroot folder, and in that folder, add a new JavaScript file named interop.js. Update the code to the following:
+var skimedicInterop = {};
+skimedicInterop.setLocalStorage = function (key, data) {
+  localStorage.setItem(key, data); //scoped to browser window
+}
+skimedicInterop.getLocalStorage = function (key) {
+  return localStorage.getItem(key);
+}
+skimedicInterop.setSessionStorage = function (key, data) {
+  sessionStorage.setItem(key, data);    //scoped to browser tab
+}
+skimedicInterop.getSessionStorage = function (key) {
+  return sessionStorage.getItem(key);
+}
+
+Update the index.html page to include the JavaScript file (just before the closing body tag):
+<script src="js/interop#[.{fingerprint}].js"></script>
+
+Add the following as the last navigation entry before the privacy page in the NavMenu.razor component: 
+<div class="nav-item px-3">
+  <NavLink class="nav-link" href="state-management">
+    <span class="fa-solid fa-archive pe-2" aria-hidden="true"></span>Session Storage
+  </NavLink>
+</div>

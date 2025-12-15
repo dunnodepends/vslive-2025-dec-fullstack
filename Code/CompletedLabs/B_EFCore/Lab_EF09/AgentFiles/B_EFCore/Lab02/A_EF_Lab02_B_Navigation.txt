@@ -1,0 +1,40 @@
+Always use file scoped namespaces. Always combine attributes on a single line when possible. 
+The project does not use nullable reference types. 
+There is a GlobalUsings.cs file that includes common usings, don't include using statements in new files if they are already in the globalusings.cs file.
+I prefer expression bodied members when possible. Single line if statements should still use braces. Use ternary operators when appropriate. 
+Use internal over private. All classes and methods are public unless told otherwise. Don't add a constructor unless instructed to do so. 
+Use primary constructors when possible and don't declare a class level variable if the parameter from the constructor can be used.
+Don't initialize properties unless instructed to do so.
+
+When creating collection navigation properties, always initialize them to new instances of the collection as an List<T>. 
+Also, always use ICollection<T> for collection navigation properties.
+Name navigation properties using plural names for collections and singular names with navigation as the suffix for single instances.
+Always use the nameof() function instead of string literals when specifying foreign key names and inversepropeties in attributes.
+Always add the ForeignKey atribute for intances navigation properties unless otherwise specified.
+Always add the InverseProperty attribute for all navigation properties.
+All navigation properties should have get and set, even when initialized.
+
+In the Auolot.Models project, update Car.cs:
+Add MakeNavigation, ForeignKey of MakeId, InverseProperty of Make.Cars
+Add RadioNavigation, No ForeignKey, InverseProperty of Radio.CarNavigation
+Add ICollection<Driver> Drivers, InverseProperty of Driver.Cars
+Add ICollection<CarDriver> CarDrivers, InverseProperty of CarDriver.CarNavigation
+Update CarDriver.cs:
+Add DriverNavigation, ForeignKey of DriverId, InverseProperty of Driver.CarDrivers
+Add CarNavigation, ForeignKey of CarId, InverseProperty of Car.CarDrivers
+Update Driver.cs:
+Add ICollection<Car> Cars, InverseProperty of Car.Drivers
+Add ICollection<CarDriver> CarDrivers, InverseProperty of CarDriver.DriverNavigation
+Update Make.cs:
+Add ICollection<Car> Cars, InverseProperty of Car.MakeNavigation
+Update Radio.cs:
+Add CarNavigation, ForeignKey of CarId, InverseProperty of Car.RadioNavigation
+
+In the Autolot.Models project, update Car.cs with the following property:
+Add public string MakeName (string, not mapped, readonly property with value of: MakeNavigation?.Name ?? "Unknown")
+Add override for ToString() method to return $"{PetName ?? "**No Name**"} is a {Color} {MakeNavigation?.Name} with ID {Id}.".
+
+
+
+
+

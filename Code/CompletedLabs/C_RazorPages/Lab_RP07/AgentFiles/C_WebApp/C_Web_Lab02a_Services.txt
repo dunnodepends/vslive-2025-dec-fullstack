@@ -1,0 +1,27 @@
+Always use file scoped namespaces. Always combine attributes on a single line when possible. 
+The project does not use nullable reference types. 
+There is a GlobalUsings.cs file that includes common usings, don't include using statements in new files if they are already in the globalusings.cs file.
+I prefer expression bodied members when possible. Single line if statements should still use braces. Use ternary operators when appropriate. 
+Use internal over private. All classes and methods are public unless told otherwise. 
+Don't add a constructor unless instructed to do so. 
+Use primary constructors when possible and don't declare a class level variable if the parameter from the constructor can be used.
+Don't initialize properties unless instructed to do so.
+
+
+All work is to be done in the AutoLot.Services project unless otherwise specified.
+
+In the Logging folder, add a public sealed class named AppLogging.cs. Make the class implement IAppLogging. Add a default constructor that takes an instance of ILogger<AppLogging>. Add two internal helper methods: LogWithException and LogWithoutException. 
+Both methods should take strings for memberName, filePath, and int for lineNumber, and a string message. The LogWithException method also needs to take and exception (ex) and an Action<Exception,string, object[]> named logAction. The LogWithoutException should take an Action<string, object[]> logAction. Both members need to push the memberName, filePath, lineNumber onto the LogContext, adding the return values from the calls to a List<IDisposable>, then execute the logAction with the message and an empty object array. Then the methods need to dispose of the items in the List<IDisposable> returned from the LogContext.PushProperty method. Then implement all of the interface methods and use the attributes from the interface in the interface methods.
+
+Add a new folder named utilities, and in that folder add a public static class named StringExtensions. Add a C# 14 extension block that takes in a string (this block should not have any modifiers nor be static). Add a method in the block named RemoveControllerSuffix that replaces the word "Controller" at the end of a string with an empty string and returns the result. If the string does not end with "Controller", return the original string. Use OrdinalIgnoreCase for the comparison.
+
+Add the following global usings to the GlobalUsings.cs file if they do not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using AutoLot.Services.Utilities;
+
+
+Add a new folder named Simple, and in that folder add a new folder named Interfaces. In the Interfaces folder, add an interface named ISimpleService that has a method named SayHello that returns a string. In the Simple folder, add two classes named SimpleServiceOne and SimpleServiceTwo, both implement the ISimpleService interface, and return Hello from One and Hello from Two, respectively.
+
+Add the following global usings to the GlobalUsings.cs file if they do not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using AutoLot.Services.Simple;
+global using AutoLot.Services.Simple.Interfaces;
+

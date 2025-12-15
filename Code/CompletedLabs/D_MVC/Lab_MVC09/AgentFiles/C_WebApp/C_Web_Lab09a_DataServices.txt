@@ -1,0 +1,42 @@
+Always use file scoped namespaces. Always combine attributes on a single line when possible. 
+The project does not use nullable reference types. 
+There is a GlobalUsings.cs file that includes common usings, don't include using statements in new files if they are already in the globalusings.cs file.
+I prefer expression bodied members when possible. Single line if statements should still use braces. Use ternary operators when appropriate. 
+Use internal over private. All classes and methods are public unless told otherwise. Use primary constructors when possible and don't declare a class level variable if the parameter from the constructor can be used. 
+
+All work is to be done in the AutoLot.Services project unless otherwise specified.
+
+Add the following global usings to the GlobalUsings.cs file if they do not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using AutoLot.Models.Entities;
+global using AutoLot.Models.Entities.Base;
+
+
+Add a new folder named DataServices at the root of the project, and in that folder, create a new folder named Interfaces. In that folder, create a new folder named Base. In that folder, create a new interface named IDataServiceBase with TEntity generic type parameter constrained to BaseEntity and new(). Add the following method signatures:
+  Task<IQueryable<TEntity>> GetAllAsync();
+  Task<TEntity> FindAsync(int id);
+  Task<TEntity> UpdateAsync(TEntity entity, bool persist = true);
+  Task DeleteAsync(TEntity entity, bool persist = true);
+  Task<TEntity> AddAsync(TEntity entity, bool persist = true);
+  Add this comment before the ResetChangeTracker interface method: //implemented ghost method since it won’t be used by the API data service
+  void ResetChangeTracker() { }
+
+Add the following global usings to the GlobalUsings.cs file if they do not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using AutoLot.Services.DataServices;
+global using AutoLot.Services.DataServices.Interfaces;
+global using AutoLot.Services.DataServices.Interfaces.Base;
+
+In the Interfaces folder, create a new interface named ICarDataService that inherits from IDataServiceBase with TEntity as Car. Add the following method signature:
+  Task<IQueryable<Car>> GetAllByMakeIdAsync(int? makeId);
+In the interfaces folder, create a new interface named IMakeDataService that inherits from IDataServiceBase with TEntity as Make. No additional methods are needed.
+
+Add a new folder named Dal under the DataServices folder. In that folder, create a new folder named Base. In that folder, create a new public abstract class named DalDataServiceBase with TEntity generic type parameter constrained to BaseEntity and new(). Implement the IDataServiceBase interface. In the default constructor, take an instance of IAppLogging and IBaseRepo<TEntity>. Add protected fields for those, adding Instance after the typename for the field named. Implement all interface methods using await Task.Run and repo methods. The Update method should be multi statement in the Task.Run, first saving, then returning the entity. Add method should be multi statement in the Task.Run, saving the entity, then returning it. Neither needs to call find after saving, they can just return the entity passed into the method.
+
+Add the following global usings to the GlobalUsings.cs file if they do not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using AutoLot.Services.DataServices.Dal;
+global using AutoLot.Services.DataServices.Dal.Base;
+
+In the DataServices\Dal folder, create a class named CarDalDataService that inherits from DalDataServiceBase with TEntity as Car. Implement the ICarDataService interface. In the constructor, take in IAppLogging and ICarRepo parameters and pass them to the base class. Add the GetAllByMakeIdAsync method implementation that calls GetAllBy on the ICarRepo instance using makeId.Value. If the makeId does not have a value, return GetAllIgnoreQueryFilters().
+
+In the DataServices\Dal folder, create a class named MakeDalDataService that inherits from DalDataServiceBase with TEntity as Make. Implement the IMakeDataService interface. In the constructor, take in IAppLogging and IMakeRepo parameters and pass them to the base class. 
+
+In the extension block in the StringExtensions class, add a new method named RemoveAsyncSuffix that removes "Async" if it's the end of the string passed in. Use the existing extension block, do not create a new one.

@@ -1,0 +1,4 @@
+[25-11-28 12:40:27 Error]AutoLot.Api:AutoLot.Services.Logging.AppLogging
+Message:Test error
+in method TestLogging at C:\Projects\HandsOnLabs\dotnetcore_hol_fourday\10.0\Code\CompletedLabs\E_API\Lab_API02\AutoLot.Api\Controllers\ValuesController.cs:22
+

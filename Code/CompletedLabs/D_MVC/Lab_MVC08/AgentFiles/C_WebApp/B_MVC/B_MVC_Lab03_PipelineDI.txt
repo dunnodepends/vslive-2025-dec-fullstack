@@ -1,0 +1,104 @@
+Always use file scoped namespaces. Always combine attributes on a single line when possible. 
+The project does not use nullable reference types. 
+There is a GlobalUsings.cs file that includes common usings, don't include using statements in new files if they are already in the globalusings.cs file.
+I prefer expression bodied members when possible. Single line if statements should still use braces. Use ternary operators when appropriate. 
+Use internal over private. All classes and methods are public unless told otherwise. Don't add a constructor unless instructed to do so. 
+Use primary constructors when possible and don't declare a class level variable if the parameter from the constructor can be used.
+Don't initialize properties unless instructed to do so. All work is to be done in the Autolot.Mvc project.
+
+The following is all done in Program.cs
+
+Add the following after the call to CreateBuilder:
+
+builder.ConfigureSerilog();
+builder.Services.RegisterLoggingInterfaces();
+if (!builder.Environment.IsDevelopment())
+{
+  builder.WebHost.UseStaticWebAssets();
+}
+
+Add the following after AddControllersWithViews():
+builder.Services.AddScoped<ICarDriverRepo, CarDriverRepo>();
+builder.Services.AddScoped<ICarRepo, CarRepo>();
+builder.Services.AddScoped<IDriverRepo, DriverRepo>();
+builder.Services.AddScoped<IMakeRepo, MakeRepo>();
+builder.Services.AddScoped<IRadioRepo, RadioRepo>();
+builder.Services.AddKeyedScoped<ISimpleService, SimpleServiceOne>(nameof(SimpleServiceOne));
+builder.Services.AddKeyedScoped<ISimpleService, SimpleServiceTwo>(nameof(SimpleServiceTwo));
+builder.Services.Configure<DealerInfo>(builder.Configuration.GetSection(nameof(DealerInfo)));
+builder.Services.AddHttpContextAccessor();
+var connectionString = builder.Configuration.GetConnectionString("AutoLot");
+builder.Services.AddDbContextPool<ApplicationDbContext>(
+  options =>
+  {
+    options.ConfigureWarnings(wc => wc.Ignore(RelationalEventId.BoolWithDefaultWarning));
+    options.UseSqlServer(connectionString,
+      sqlOptions => sqlOptions.EnableRetryOnFailure().CommandTimeout(60));
+  });
+
+Update the call to AddControllersWithViews to add DI validation and anti-forgery token globally.
+builder.Services.AddControllersWithViews(options =>
+{
+  options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+})
+    .AddControllersAsServices()
+    .AddViewComponentsAsServices()
+    .AddTagHelpersAsServices();
+builder.Host.UseDefaultServiceProvider(o =>
+{
+  o.ValidateOnBuild = true;
+  o.ValidateScopes = true;
+});
+?
+In the section after builder.Build(), flip the IsDevelopment if block around, and add the UseDeveloperExceptionPage so the code looks like this:
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+  app.UseDeveloperExceptionPage();
+  if (app.Configuration.GetValue<bool>("RebuildDataBase"))
+  {
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    SampleDataInitializer.ClearAndReseedDatabase(dbContext);
+  }
+}
+else
+{
+  app.UseExceptionHandler("/Home/Error");
+  // The default HSTS value is 30 days. 
+  //You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+  app.UseHsts();
+}
+
+Add the call to map controllers and comment out the call to MapControllerRoute so the code looks like this:
+app.MapControllers();
+//app.MapControllerRoute(
+//        name: "default",
+//        pattern: "{controller=Home}/{action=Index}/{id?}")
+//    .WithStaticAssets();
+
+
+The following work is done in Program.cs of the AutoLot.Mvc project:
+Add the following before the call to builder.Build():
+if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Local"))
+{
+  builder.Services.AddWebOptimizer(false,false);
+}
+else
+{
+  builder.Services.AddWebOptimizer(options =>
+  {
+    //options.MinifyCssFiles(); //Minifies all CSS files
+    options.MinifyCssFiles("css/**/*.css"); 
+    //options.MinifyJsFiles(); //Minifies all JS files
+    options.MinifyJsFiles("js/site.js");
+    //options.MinifyJsFiles("js/**/*.js");  
+  });
+}
+Add app.UseWebOptmizer() before UseHttpsRedirection()
+Add app.UseStaticFiles() after UseHttpsRedirection()
+Comment out app.MapStaticAssets();
+
+The following is done in _ViewImports.cshtml
+Add the following line to the end of the file:
+@addTagHelper *, WebOptimizer.Core

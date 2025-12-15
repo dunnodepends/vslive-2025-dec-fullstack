@@ -1,0 +1,73 @@
+<h3>@Title</h3>
+<button @onclick="OnClick">Click Me</button>
+<span>Click count: @ClickCount</span>
+
+<ul>
+    @foreach (var message in OutputLog.Messages)
+    {
+        <li>@message</li>
+    }
+</ul>
+
+@code {
+    [Parameter] public string Title { get; set; }
+    [Parameter] public int DemoValue { get; set; }
+    [Inject] public OutputLog OutputLog { get; set; }
+    [SupplyParameterFromQuery] public int InitialCount { get; set; } = 0;
+
+    internal int ClickCount { get; set; }
+
+    protected override void OnInitialized()
+    {
+        OutputLog.LogMessage("OnInitialized before base");
+        base.OnInitialized();
+        OutputLog.LogMessage("OnInitialized after base");
+    }
+
+    protected override void OnParametersSet()
+    {
+        OutputLog.LogMessage("OnParametersSet before base");
+        base.OnParametersSet();
+        OutputLog.LogMessage("OnParametersSet after base");
+    }
+
+    public override async Task SetParametersAsync(
+        ParameterView parameters)
+    {
+        OutputLog.LogMessage("SetParametersAsync before base");
+        foreach (var kvp in parameters)
+        {
+            OutputLog.LogMessage($"SetParametersAsync parameter: {kvp.Name} = {kvp.Value}");
+        }
+        await base.SetParametersAsync(parameters);
+        OutputLog.LogMessage("SetParametersAsync after base");
+    }
+
+    protected override bool ShouldRender()
+    {
+        OutputLog.LogMessage("ShouldRender called before base");
+        var result = base.ShouldRender();
+        OutputLog.LogMessage($"ShouldRender after: {result}");
+        return result;
+    }
+
+    protected override void OnAfterRender(
+        bool firstRender)
+    {
+        OutputLog.LogMessage($"OnAfterRender before base: firstRender={firstRender}");
+        base.OnAfterRender(firstRender);
+        OutputLog.LogMessage($"OnAfterRender after base: firstRender={firstRender}");
+    }
+
+    public void Dispose()
+    {
+        OutputLog.LogMessage("Dispose called");
+        // Clean up resources if needed
+    }
+
+    void OnClick()
+    {
+        ClickCount++;
+    }
+}
+

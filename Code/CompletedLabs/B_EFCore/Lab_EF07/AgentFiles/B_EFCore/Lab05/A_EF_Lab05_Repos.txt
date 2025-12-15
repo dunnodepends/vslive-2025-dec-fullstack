@@ -1,0 +1,123 @@
+Always use file scoped namespaces. Always combine attributes on a single line when possible. 
+The project does not use nullable reference types. 
+There is a GlobalUsings.cs file that includes common usings, don't include using statements in new files if they are already in the globalusings.cs file.
+I prefer expression bodied members when possible. Single line if statements should still use braces. Use ternary operators when appropriate. 
+Use internal over private. All classes and methods are public unless told otherwise. Don't add a constructor unless instructed to do so. 
+Use primary constructors when possible and don't declare a class level variable if the parameter from the constructor can be used.
+Don't initialize properties unless instructed to do so.
+
+In the Autolot.Dal project, create a new folder named Repos. In that folder, create two folders, one named Base and the other named Interfaces.
+Add a new folder named Base to the Interfaces folder. In the Interfaces/Base folder, create an interface named 
+IBaseViewRepo, make it generic with a contraint  of class and new(), and implement IDisposable. Add with the following method signatures:
+ApplicationDbContext Context { get; }
+IQueryable<T> ExecuteSqlString(string sql)
+IQueryable<T> GetAll()
+IQueryable<T> GetAllIgnoreQueryFilters()
+IQueryable<T> GetAllIgnoreQueryFilters(string[] filtersToIgnore)
+
+Create an interface named IBaseRepo<T> that implements IBaseViewRepo and has a generic constraint of BaseEntity and new() in the Interfaces/Base folder.
+Implement the following methods signatures:
+    T Find(int? id);
+    T FindAsNoTracking(int id);
+    T FindIgnoreQueryFilters(int id);
+    void ExecuteParameterizedQuery(string sql, object[] sqlParametersObjects);
+    int Add(T entity, bool persist = true);
+    int AddRange(IQueryable<T> entities, bool persist = true);
+    int Update(T entity, bool persist = true);
+    int UpdateRange(IQueryable<T> entities, bool persist = true);
+    int Delete(int id, long timeStamp, bool persist = true);
+    int Delete(T entity, bool persist = true);
+    int DeleteRange(IQueryable<T> entities, bool persist = true);
+    int ExecuteBulkUpdate(Expression<Func<T, bool>> whereClause,
+      Action<UpdateSettersBuilder<T>> setPropertyCalls);
+    int ExecuteBulkDelete(Expression<Func<T, bool>> whereClause);
+    int SaveChanges();
+
+Add the following global usings to the GlobalUsings.cs file if they do not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using AutoLot.Dal.Repos;
+global using AutoLot.Dal.Repos.Interfaces;
+global using AutoLot.Dal.Repos.Interfaces.Base;
+
+In the Repos/Base folder, create an abstract class named BaseViewRepo<T> that implements IBaseViewRepo with a generic constraint 
+of class and new(). Add three fields:
+  private readonly bool _disposeContext;
+  public DbSet<T> Table {get;}
+  public ApplicationDbContext Context { get; }
+Implement a protected constructor that takes an ApplicationDbContext and sets disposeContext to false and sets the Table field.
+Implement a protected constructor that takes an DbContextOptions that calls the first constructor and sets disposeContext to true.
+Implement IDisposable and the Dispose pattern to dispose of the context if _disposeContext is true. 
+Include GC.SuppressFinalize in the Dispose method. Make the dispose method virtual.
+Implement the rest of the methods from the interface. Make GetAll and both GetAllIgnoreQueryFilters methods virtual. 
+GetAllIgnoreQueryFilters with the parameter should call Table.IgnoreQueryFilters(filtersToIgnore).
+
+Add the following global usings to the GlobalUsings.cs file if they do not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using AutoLot.Dal.Repos.Base;
+
+In the Repos/Base folder, create an abstract class named BaseRepo<T> that inherits from BaseViewRepo<T> and implements IBaseRepo<T> with a 
+generic constraint of BaseEntity and new(). The SaveChanges method should call the Context's SaveChanges method. 
+Implement the rest of the methods from the interface, marking all interface methods as virtual. 
+For the Find method, return null if id is null, else call Table.Find(id.Value).
+Any AsNoTracking methods should call AsNotrackingWithidentityResolution. 
+All of the crud methods take an optional persist parameter that should call SaveChanges if true.
+Implement the Delete(int id, long timeStamp, bool persist=true), ExecuteBulkUpdate, ExecuteBulkDelete, and SaveChanges as follows:
+public int Delete(int id, long timeStamp, bool persist = true)
+{
+  var entity = new T {Id = id, TimeStamp = timeStamp};
+  Context.Entry(entity).State = EntityState.Deleted;
+  return persist ? SaveChanges() : 0;
+}
+  public int ExecuteBulkUpdate(Expression<Func<T, bool>> whereClause,
+    Action<UpdateSettersBuilder<T>> setPropertyCalls)
+    => Table.IgnoreQueryFilters().Where(whereClause).ExecuteUpdate(setPropertyCalls);
+
+public int ExecuteBulkDelete(Expression<Func<T,bool>> whereClause)
+  => Table.IgnoreQueryFilters().Where(whereClause).ExecuteDelete();
+
+  public int SaveChanges()
+{
+  try
+  {
+    return Context.SaveChanges();
+  }
+  catch (CustomException)
+  {
+    //Should handle intelligently - already logged
+    throw;
+  }
+  catch (Exception ex)
+  {
+    //Should log and handle intelligently
+    throw new CustomException("An error occurred updating the database", ex);
+  }
+}
+
+In the Repos/Interfaces folder, create an interface named for each of the entities (Car,CarDriver,Driver,Make,Radio) that inherit 
+from IBaseRepo<T>. For the ICarRepo interface, add the following method signatures:
+  IQueryable<Car> GetAllBy(int makeId);
+  string GetPetName(int id);
+  int SetAllDrivableCarsColorAndMakeId(string color, int makeId);
+  int DeleteNonDrivableCars();
+
+In the Repos folder, create a class named CarDriverRepo that inherits from BaseRepo<CarDriver> and implements ICarDriverRepo.
+Build a helper method named BuildBaseQuery that returns an IIncludableQueryable<CarDriver,Driver> that returns the CarDrivers table including 
+the CarNavigation and DriverNavigationProperties. Use this helper method when implementing GetAll, GetAllIgnoreQueryFilters, and Find.
+Find should also call IngoreQueryFilters. The constructor that takes DbContextOptions should be internal.
+
+In the Repos folder, create a class named CarRepo that inherits from BaseRepo<Car> and implements ICarRepo.
+Build a helper method named BuildBaseQuery that returns an IOrderedQueryable<Car> that includes MakeNavigation and is ordered by PetName.
+Implement the helper method when implementing all methods on the interface. Find should also call IngoreQueryFilters. 
+SetAlLDrivableCarsColorAndMakeId should use ExecuteBulkUpdate. DeleteNonDrivableCars should use ExecuteBulkDelete. 
+GetPetName should use the GetPetName stored procedure and call into ExecuteParameterizedQuery using an in and an out parameter.
+The constructor that takes DbContextOptions should be internal.
+
+In the Repos folder, create a class named DriverRepo that inherits from BaseRepo<Driver> and implements IDriverRepo. make all constructors public.
+Build a helper method named BuildBaseQuery that returns an IOrderedQueryable<Driver> that returns the Drivers table ordered by PersonInformation.LastName then by PersonInformation.FirstName. Use this helper method when implementing GetAll and GetAllIgnoreQueryFilters.
+The constructor that takes DbContextOptions should be internal.
+
+In the Repos folder, create a class named MakeRepo that inherits from BaseRepo<Make> and implements IMakeRepo. make all constructors public.
+Build a helper method named BuildBaseQuery that returns an IOrderedQueryable<Make> that returns the Makes table ordered by Name. Use this helper method when implementing GetAll and GetAllIgnoreQueryFilters.
+The constructor that takes DbContextOptions should be internal.
+
+In the Repos folder, create a class named RadioRepo that inherits from BaseRepo<Radio> and implements IRadioRepo. 
+The constructor that takes DbContextOptions should be internal.
+

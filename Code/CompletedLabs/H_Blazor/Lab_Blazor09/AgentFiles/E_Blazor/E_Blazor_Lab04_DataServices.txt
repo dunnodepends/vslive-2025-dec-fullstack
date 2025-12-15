@@ -1,0 +1,125 @@
+Always use file scoped namespaces. Always combine attributes on a single line when possible. The project does not use nullable reference types. 
+If there is a GlobalUsings.cs file, don't include using statements in new files if they are already in the globalusings.cs file.
+I prefer expression bodied members when possible. Single line if statements should still use braces. Use ternary operators when appropriate. 
+Use internal over private. All classes and methods are public unless told otherwise. Don't add a constructor unless instructed to do so. 
+Use primary constructors when possible and don't declare a class level variable if the parameter from the constructor can be used.
+Don't initialize properties unless instructed to do so. The @code block in razor components should be at the bottom of the file.
+
+All work is to be done in the AutoLot.Blazor project.
+
+Add the following global usings to the GlobalUsings.cs file if it does not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using AutoLot.Blazor.Models.Entities;
+global using AutoLot.Blazor.Models.Entities.Base;
+global using AutoLot.Blazor.Models.Validation;
+global using AutoLot.Blazor.Models.ViewModels;
+
+In the Services folder, create a new folder named Interfaces, and in that folder, create a new folder named Base. In that folder,
+create an interface named IDataServiceBase typed to TEntity where TEntity is a class that inherits from BaseEntity.
+Add the following methods to the interface:
+GetEntityAsync(int id) - returns a Task<TEntity>
+GetAllEntitiesAsync() - returns a Task<IEnumerable<TEntity>>
+AddEntityAsync(TEntity entity) - returns a Task<TEntity>
+UpdateEntityAsync(TEntity entity) - returns a Task<TEntity>
+DeleteEntityAsync(TEntity entity) - returns a Task
+
+Add the following global usings to the GlobalUsings.cs file if it does not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using AutoLot.Blazor.Services.Interfaces;
+global using AutoLot.Blazor.Services.Interfaces.Base;
+
+In the interfaces folder, create a new interface named ICarDataService that inherits from IDataServiceBase<Car>.
+Add the following methods to the ICarDataService interface:
+GetByMakeAsync(int makeId) - returns a Task<IEnumerable<Car>>
+
+In the Interfaces folder, create another interface named IMakeDataService that inherits from IDataServiceBase<Make>.
+
+Create a folder named Base in the Services folder, and in that folder, create an abstract class named DataServiceBase.
+Add two protected properties:
+Makes (List<Make>)
+Cars (List<Car)
+
+Add a constructor that initializes the properties with the following data:
+  Makes =
+  [
+    new Make { Id = 1, Name = "VW" },
+    new Make { Id = 2, Name = "Ford" },
+    new Make { Id = 3, Name = "Saab" },
+    new Make { Id = 4, Name = "Yugo" },
+    new Make { Id = 5, Name = "BMW" },
+    new Make { Id = 6, Name = "Pinto" }
+  ];
+  Cars =
+  [
+    new Car { Id = 1, MakeId = 1, Color = "Black", PetName = "Zippy", Price = "$45,000.00",
+      MakeNavigation = Makes.First(m => m.Id == 1) },
+    new Car { Id = 2, MakeId = 2, Color = "Rust", PetName = "Rusty", Price = "$45,000.00",
+      MakeNavigation = Makes.First(m => m.Id == 2) },
+    new Car { Id = 3, MakeId = 3, Color = "Black", PetName = "Mel", Price = "$45,000.00",
+      MakeNavigation = Makes.First(m => m.Id == 3) },
+    new Car { Id = 4, MakeId = 4, Color = "Yellow", PetName = "Clunker", Price = "$45,000.00",
+      MakeNavigation = Makes.First(m => m.Id == 4) },
+    new Car { Id = 5, MakeId = 5, Color = "Black", PetName = "Bimmer", Price = "$45,000.00",
+      MakeNavigation = Makes.First(m => m.Id == 5) },
+    new Car { Id = 6, MakeId = 5, Color = "Green", PetName = "Hank", Price = "$45,000.00",
+      MakeNavigation = Makes.First(m => m.Id == 5) },
+    new Car { Id = 7, MakeId = 5, Color = "Pink", PetName = "Pinky", Price = "$45,000.00",
+      MakeNavigation = Makes.First(m => m.Id == 5) },
+    new Car { Id = 8, MakeId = 6, Color = "Black", PetName = "Pete", Price = "$45,000.00",
+      MakeNavigation = Makes.First(m => m.Id == 6) },
+    new Car { Id = 9, MakeId = 4, Color = "Brown", PetName = "Brownie", Price = "$45,000.00",
+      MakeNavigation = Makes.First(m => m.Id == 4) },
+    new Car { Id = 10, MakeId = 1, Color = "Rust", PetName = "Lemon", IsDrivable = false,
+      Price = "$45,000.00", MakeNavigation = Makes.First(m => m.Id == 1) }
+];
+
+Add the following global usings to the GlobalUsings.cs file if it does not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using AutoLot.Blazor.Services.Base;
+
+In the services folder, create a class named CarDataService that implements ICarDataService and inherits from DataServiceBase.
+Implement all of the methods using the Cars and Makes properties from the DataServiceBase class.
+
+In the services folder, create a class named MakeDataService that implements IMakeDataService and inherits from DataServiceBase.
+Implement all of the methods using the Cars and Makes properties from the DataServiceBase class.
+
+Add three JSON files named appsettings.json, appsettings.Development.json , and appsettings.Staging.json to the wwwroot folder of the AutoLot.Blazor project. Update the files to the following:
+//appsettings.json
+{
+  "DealerInfo": {
+    "DealerName": "Skimedic's Used Cars",
+    "City": "West Chester",
+    "State": "Ohio"
+  }
+}
+
+//appsettings.Development.json
+{
+  "DealerInfo": {
+    "DealerName": "Skimedic's Used Cars Development Site",
+    "City": "West Chester",
+    "State": "Ohio"
+  }
+}
+
+//appsettings.Staging.json
+{
+  "DealerInfo": {
+    "DealerName": "Skimedic's Used Cars Staging Site",
+    "City": "West Chester",
+    "State": "Ohio"
+  }
+}
+
+Add the following to the AutoLot.Blazor.csproj file:
+<ItemGroup>
+  <Content Update="wwwroot\appsettings.json">
+    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+  </Content>
+  <Content Update="wwwroot\appsettings.*.json">
+    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+  </Content>
+</ItemGroup>
+
+Add the following three lines to the Program.cs file just before the call to RunAsync() (don't remove any other calls):
+builder.Services.AddScoped<ICarDataService, CarDataService>();
+builder.Services.AddScoped<IMakeDataService, MakeDataService>();
+builder.Services.Configure<DealerInfo>(builder.Configuration.GetSection(nameof(DealerInfo)));
+

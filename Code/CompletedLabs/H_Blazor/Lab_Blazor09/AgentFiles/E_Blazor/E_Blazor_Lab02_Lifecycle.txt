@@ -1,0 +1,42 @@
+Always use file scoped namespaces. Always combine attributes on a single line when possible. The project does not use nullable reference types. 
+If there is a GlobalUsings.cs file, don't include using statements in new files if they are already in the globalusings.cs file.
+I prefer expression bodied members when possible. Single line if statements should still use braces. Use ternary operators when appropriate. 
+Use internal over private. All classes and methods are public unless told otherwise. Don't add a constructor unless instructed to do so. 
+Use primary constructors when possible and don't declare a class level variable if the parameter from the constructor can be used.
+Don't initialize properties unless instructed to do so. The @code block in razor components should be at the bottom of the file.
+All work is to be done in the AutoLot.Blazor project.
+
+Create a new folder named Services in the project, and in that folder create a public class named OutputLog. 
+Add a List<String> property named Messages to the OutputLog class. 
+Implement a method named LogMessage that accepts a string parameter and adds it to the Messages list.
+
+Add a new file named GlobalUsings.cs in the root of the project, and add the following global using statement to it (clear out any other code).
+global using AutoLot.Blazor.Services;
+
+
+Add the OutputLog service to the dependency injection container in Program.cs with a transient lifetime.
+
+Create new folder named Shared, and in that folder, create a Blazor component named "LifecycleDemo.razor" in the that demonstrates the following lifecycle methods: 
+OnInitialized, OnParametersSet, SetParametersAsync, OnAfterRender, ShouldRender, OnAfterRender, and Dispose. 
+The component should accept a parameter named "Title" of type string and display it in an <h3> tag. 
+The component should accept a parameter named "DemoValue" of type int. 
+The component should also inject the OutputLog service and use it to log messages during each lifecycle method.
+Each lifecycle method that has a callable base method, log a message to the outputlog service indicating when it has been called just 
+before calling the base method and just after calling the base method, and the message should include the method name and "before" or "after", accordingly.
+Lifecycle methods without a callable base method should just log a message indicating when they have been called.
+Additionally, include a button that, when clicked, updates a local property named "ClickCount" 
+and displays the number of times the button has been clicked. 
+For the SetParametersAsync code, loop through the parameters and add them to the log.
+After the button code, loop through the Messages in the OutputLog service and display them in an unordered list.
+Also add a query string parameter named "initialCount" of type int with an initial value of 0.
+Ensure that the component properly cleans up any resources in the Dispose method.
+
+Add the following to the _Imports.razor file if they do not already exist:
+@using AutoLot.Blazor.Shared
+
+Create a new razor page named Lifecycle.razor in the Pages folder that uses the LifecycleDemo component. 
+Make the route "/lifecycle-demo". The <PageTitle> value is "Lifecycle Demo". Include a button that increments a local integer property named "DemoValue" 
+and passes that value to the LifecycleDemo component as a parameter.
+
+Add a menu item to the NavMenu.razor component that links to the new Lifecycle page with the text "Lifecycle Demo".
+Add a font-awsome icon "fa-solid fa-bolt-lightning" to the menu item. Add the icon before the text. Use "pe-2" class on the icon for spacing.

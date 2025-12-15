@@ -1,0 +1,34 @@
+Always use file scoped namespaces. Always combine attributes on a single line when possible. 
+The project does not use nullable reference types. 
+There is a GlobalUsings.cs file that includes common usings, don't include using statements in new files if they are already in the globalusings.cs file.
+I prefer expression bodied members when possible. Single line if statements should still use braces. Use ternary operators when appropriate. 
+Use internal over private. All classes and methods are public unless told otherwise. Use primary constructors when possible and don't declare a class level variable if the parameter from the constructor can be used. Add ValidateAntiForgeryToken attribute on all HttpPost methods
+
+All work is to be done in the AutoLot.Mvc project unless otherwise specified.
+
+Add the following global usings to the GlobalUsings.cs file if they do not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using AutoLot.Dal.Repos.Base;
+global using AutoLot.Dal.Repos.Interfaces.Base;
+global using AutoLot.Models.Entities.Base;
+global using Microsoft.AspNetCore.Mvc.Rendering;
+
+
+In the Controllers folder, add a new folder named Base and add a new public abstract class named BaseCrudController. Make it generic with TEntity, constrained to BaseEntity, new(). Add the Route (controller/action) to the top of the class. Accept two parameters in the constructor, IAppLogging (appLogging) and IBaseRepo<TEntity> (baseRepo). Assign the parameters to two protected readonly properties named AppLoggingInstance and BaseRepoInstance, respectively. Add the following protected methods:
+abstract GetLookupValues (input:none. return type: SelectList)
+GetOneEntity (input:int? id. return type: TEntity. Logic:return null if id is null, else call Find on BaseRepoInstance)
+Add the following public virtial action methods:
+HttpGet Index - add Route(/Controller) and Route(/Controller/Action) attributes. (input:none. return type: IActionResult. Logic: return View with call to GetAllIgnoreQueryFilters as the model)
+HttpGet("{id?}") Details -  (input int?. return IActionResult. Logic: if id does not have a value, return BadRequest. Else call GetOneEntity. If Entity is null, return NotFound(). else return View(entity)
+HttpGet Create Assign ViewData["LookupValues] = GetLookupValues(), return View
+HttpPost Create (input TEntity entity. return IActionResult. Logic: if ModelState is not valid, assign ViewData["LookupValues"] = GetLookupValues(), return View(entity). Else call Add on BaseRepoInstance with entity, then redirect to Details)
+HttpGet("{id?}) Edit (input int? id. return IActionResult. Logic: If id.hasvalue isn't true, return BadRequest(). If GetOneEntity returns null, return NotFound(). Assign ViewData["LookupValues] = GetLookupValues(), return View(entity)
+HttpPost("{id}") Post (input int id, TEntity entity. return IActionResult. Logic: if id != entity.Id, return BadRequest, if ModelState is not valid, assign ViewData["LookupValues"] = GetLookupValues(), return View(entity). Else call Update on BaseRepoInstance with entity, then redirect to Details)
+HttpGet("{id?}) Delete (input int? id. return IActionResult. Logic: If id.hasvalue isn't true, return BadRequest(). If GetOneEntity returns null, return NotFound(). return View(entity)
+HttpPost("{id}") Post (input int id, TEntity entity. return IActionResult. Logic: if id != entity.Id, return BadRequest, Call Delete on BaseRepoInstance with entity, then redirect to Index)
+
+Add the following global usings to the GlobalUsings.cs file if they do not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using AutoLot.Mvc.Controllers.Base;
+
+Remove the route from the CarsController and have it inherit from BaseCrudController with TEntity as Car. Use a primary contructor to accept IAppLogging and ICarRepo parameters and pass them to the base constructor. Also take in a IMakeRepo (makeRepo) parameter (do not assign it to a class field. Override the GetLookupValues method to return a SelectList of all Makes from the makeRepo ordered by Name, with Id as the value field and Name as the text field. Add another action method:
+HttpGet("{makeId}/{mAKEnAME}") ByMake (input int makeId, string makeName. return IActionResult. Logic: return View with a model of the result of casting BaseRepoInstance to ICarRepo and calling GetAllBy passing in the makeId. Set the ViewBag.MakeName = makeName.
+(no HTTP verb) BadEndPoint (input:none. return IActionResult. Logic: return new OkObjectResult(5)) Comment out this method after adding it.

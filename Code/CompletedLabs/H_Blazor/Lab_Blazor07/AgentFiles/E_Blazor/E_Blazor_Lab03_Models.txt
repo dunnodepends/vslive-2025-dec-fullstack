@@ -1,0 +1,135 @@
+Always use file scoped namespaces. Always combine attributes on a single line when possible. The project does not use nullable reference types. 
+If there is a GlobalUsings.cs file, don't include using statements in new files if they are already in the globalusings.cs file.
+I prefer expression bodied members when possible. Single line if statements should still use braces. Use ternary operators when appropriate. 
+Use internal over private. All classes and methods are public unless told otherwise. Don't add a constructor unless instructed to do so. 
+Use primary constructors when possible and don't declare a class level variable if the parameter from the constructor can be used.
+Don't initialize properties unless instructed to do so. The @code block in razor components should be at the bottom of the file.
+All work is to be done in the AutoLot.Blazor.Models project.
+
+Create a new folder named Entities in the project, and in that folder create a new folder named Base. 
+In that folder, create a public abstract class named BaseEntity the following properties:
+Id (int, public)
+TimeStamp (long, public)
+
+Rename Class1.cs to GlobalUsings.cs and replace the contents with the following global using statements (sorted alphabetically):
+global using AutoLot.Blazor.Models.Entities;
+global using AutoLot.Blazor.Models.Entities.Base;
+global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.Extensions.Validation;
+global using System.ComponentModel;
+global using System.ComponentModel.DataAnnotations;
+global using System.Reflection;
+
+Update the AutoLot.Models.csproj file to include the following:
+<PropertyGroup>
+  <NoWarn>$(NoWarn);ASP0029</NoWarn>
+</PropertyGroup>
+
+In the Entities folder, create a class named Car that inherits from BaseEntity, add the [ValidatableType] attribute to the class, and the following properties:
+Color (string, public) - Required, maximum length of 50
+Price (string, public)
+IsDrivable (bool, public) - Display name "Is Drivable", instantiated to true
+DateBuilt (DateTime?, public)
+Display (string, public)
+PetName (string, public) - Required, maximum length of 50, display name "Pet Name"
+MakeId (int, public) - Required, display name "Make"
+MakeNavigation (Make, public)
+MakeName (string, public, read-only) - returns MakeNavigation?.Name or "Unknown"
+
+Override the ToString() method to return a string in the format:
+    $"{PetName ?? "**No Name**"} is a {Color} {MakeNavigation?.Name} with ID {Id}.";
+
+Create another class named Make in the Entities folder that inherits BaseEntity, add the [ValidatableType] attribute to the class, and the following properties:
+Name (string, public) - Required, maximum length of 50
+Cars (ICollection<Car>, public) initialized to a new List<Car>()
+
+
+Create a new folder named Validation in the project and in that folder, create a class named MustBeGreaterThanZeroAttribute that inherits from ValidationAttribute. 
+Update the code to the following:
+public class MustBeGreaterThanZeroAttribute(string errorMessage)
+  : ValidationAttribute(errorMessage)
+{
+  public MustBeGreaterThanZeroAttribute() : this("{0} must be greater than 0") { }
+  public override string FormatErrorMessage(string name) 
+    => string.Format(ErrorMessageString, name);
+  protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+  {
+    if (!int.TryParse(value?.ToString(), out int result))
+    {
+      return new ValidationResult(FormatErrorMessage(validationContext.DisplayName),
+        new [] {validationContext.MemberName});
+    }
+    return result > 0
+      ? ValidationResult.Success
+      : new ValidationResult(FormatErrorMessage(validationContext.DisplayName),
+          new[] { validationContext.MemberName });
+  }
+}
+
+Create another class in the Validation folder named MustNotBeGreaterThanAttribute that inherits from ValidationAttribute.
+Update the code to the following:
+[AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
+public class MustNotBeGreaterThanAttribute( string otherPropertyName, string errorMessage)
+  : ValidationAttribute(errorMessage)
+{
+  private string _otherPropertyDisplayName;
+  public MustNotBeGreaterThanAttribute(string otherPropertyName)
+    : this(otherPropertyName, "{0} must not be greater than {1}") { }
+  public override string FormatErrorMessage(string name) 
+    => string.Format(ErrorMessageString, name, _otherPropertyDisplayName);
+  internal void SetOtherPropertyName(PropertyInfo otherPropertyInfo)
+  {
+    _otherPropertyDisplayName = 
+      otherPropertyInfo.GetCustomAttributes<DisplayAttribute>().FirstOrDefault()?.Name
+      ?? otherPropertyInfo.GetCustomAttributes<DisplayNameAttribute>()
+            .FirstOrDefault()?.DisplayName
+      ?? otherPropertyName;
+  }
+  protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+  {
+    var otherPropertyInfo = validationContext.ObjectType.GetProperty(otherPropertyName);
+    if (otherPropertyInfo == null)
+    {
+      return new ValidationResult("Unable to validate property. Please contact support");
+    }
+    SetOtherPropertyName(otherPropertyInfo);
+    if (!int.TryParse(value?.ToString(), out int toValidate))
+    {
+      return new ValidationResult($"{validationContext.DisplayName} must be numeric.",
+             new[] {validationContext.MemberName,otherPropertyName});
+    }
+    var otherPropObjectValue = otherPropertyInfo.GetValue(validationContext.ObjectInstance, null);
+    if (otherPropObjectValue == null || !int.TryParse(otherPropObjectValue.ToString(), 
+        out var otherValue))
+    {
+      return new ValidationResult(FormatErrorMessage(validationContext.DisplayName),
+             new[] {validationContext.MemberName,otherPropertyName});
+    }
+    return toValidate > otherValue 
+      ? new ValidationResult(FormatErrorMessage(validationContext.DisplayName),
+        new[] {validationContext.MemberName,otherPropertyName}) 
+      : ValidationResult.Success;
+  }
+}
+
+Add a new class in the Validation folder named ServiceCollectionExtensions with a static method named AddModelValidation that extends IServiceCollection and adds validation services to the service collection.
+
+Add the following global usings to the GlobalUsings.cs file if it does not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using AutoLot.Blazor.Models.Validation;
+
+Add a new folder named ViewModels and add a class named DealerInfo with the following properties:
+DealerName (string, public)
+City (string, public)
+State (string, public)
+
+Add a new class named AddToCartViewModel with the following properties:
+Id (int, public)
+StockQuantity (int, public) display name "Stock Quantity"
+ItemId (int, public) 
+Quantity (int, public), required, MustBeGreaterThanZero, MustNotBeGreaterThan "StockQuantity"
+
+
+
+
+
+

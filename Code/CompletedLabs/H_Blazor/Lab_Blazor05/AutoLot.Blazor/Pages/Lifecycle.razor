@@ -1,0 +1,14 @@
+@page "/lifecycle-demo"
+
+<PageTitle>Lifecycle Demo</PageTitle>
+
+<h2>Lifecycle Demo</h2>
+<button @onclick="IncrementDemoValue">Increment DemoValue</button>
+<span>DemoValue: @DemoValue</span>
+<LifecycleDemo Title="Lifecycle Demo Component" DemoValue="@DemoValue" />
+
+@code {
+    internal int DemoValue { get; set; }
+    void IncrementDemoValue() { DemoValue++; }
+}
+

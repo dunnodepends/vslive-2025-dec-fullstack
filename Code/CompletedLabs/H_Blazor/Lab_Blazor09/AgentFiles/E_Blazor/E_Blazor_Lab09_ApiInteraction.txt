@@ -1,0 +1,188 @@
+Always use file scoped namespaces. Always combine attributes on a single line when possible. The project does not use nullable reference types. 
+If there is a GlobalUsings.cs file, don't include using statements in new files if they are already in the globalusings.cs file. 
+I prefer expression bodied members when possible. Single line if statements should still use braces. Use ternary operators when appropriate. 
+Use internal over private. All classes and methods are public unless told otherwise. Don't add a constructor unless instructed to do so. 
+Use primary constructors when possible and don't declare a class level variable if the parameter from the constructor can be used. 
+Don't initialize properties unless instructed to do so. The @code block in razor components should be at the bottom of the file. 
+
+All work is to be done in the AutoLot.Blazor project unless otherwise specified. 
+
+Create a new public class named ApiServiceSettings.cs in the AutoLot.Blazor.Models.ViewModels folder. Add the following public properties:
+  Uri (string)
+  CarBaseUri (string)
+  MakeBaseUri (string)
+  MajorVersion (int)
+  MinorVersion (int)
+  Status (string)
+  ApiVersion (string) - read only, returns a string in the format "MajorVersion.MinorVersion-Status" (omit the -Status if Status is null or empty)
+
+Create a new ApiWrapper folder in the Services folder of the AutoLot.Blazor project. In this folder, add a new folder named Interfaces. 
+Add another folder named Base in the Interfaces folder, and in that folder, add a new generic interface named IApiServiceWrapperBase.cs typed to TEntity and constrained to BaseNetity, new().
+Add the following method signatures to the interface:
+  Task<IList<TEntity>> GetAllEntitiesAsync(input: none ; return: Task<List<TEntity>>);
+  Task<TEntity> GetEntityAsync(input: int id; return: Task<TEntity>);
+  Task<TEntity> AddEntityAsync(input: TEntity entity; return: Task<TEntity>);
+  Task<TEntity> UpdateEntityAsync(input: TEntity entity; return: Task<TEntity>);
+  Task DeleteEntityAsync(input: TEntity entity; return: Task);
+
+Add the following global usings to the GlobalUsings.cs file if it does not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using AutoLot.Blazor.Services.ApiWrapper;
+global using AutoLot.Blazor.Services.ApiWrapper.Interfaces;
+global using AutoLot.Blazor.Services.ApiWrapper.Interfaces.Base;
+global using Microsoft.Extensions.Options;
+global using System.Net.Http.Headers;
+global using System.Net.Http.Json;
+global using System.Text;
+global using System.Text.Json.Serialization;
+
+In the Interfaces folder, add two interface files: ICarApiServiceWrapper.cs, and IMakeApiServiceWrapper.cs. 
+Implement IApiServiceWrapperBase, passing in Make and Car as the type. Add the following method to the ICarApiServiceWrapper interface:
+  GetCarsByMakeAsync(input: int id; return: Task<List<Car>>);
+
+Create a new folder named Base in the ApiWrapper folder, and in that folder, create a new abstract class file named ApiServiceWrapperBase.cs 
+that implements IApiServiceWrapperBase where TEntity is constrained to BaseEntity, new().
+Add the following fields:
+Client (HttpClient, protected, readonly)
+_endpoint (string, private, readonly)
+ApiSettings (ApiServiceSettings, protected, readonly)
+ApiVersion (string, protected, readonly)
+
+Also create a protected readonly field named JsonOptions (JsonSerializerOptions) initialized to a new instance with the following values:
+    AllowTrailingCommas = true,
+    PropertyNameCaseInsensitive = true,
+    PropertyNamingPolicy = null,
+    ReferenceHandler = ReferenceHandler.IgnoreCycles
+
+Create a constructor that takes and HttpClient (client), IOptionsSnapshot<ApiServiceSettings> (apiSettingsSnapshot) and a string (endpoint) 
+and initializes the fields like this:
+    _endPoint = endPoint;
+    ApiSettings = apiSettingsSnapshot.Value;
+    Client = client;
+    client.BaseAddress = new Uri(ApiSettings.Uri);
+    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+    ApiVersion = ApiSettings.ApiVersion;
+
+Add the following internal methods:
+internal async Task<HttpResponseMessage> PostAsJsonAsync(string uri, string json)
+  => await Client.PostAsync(uri, new StringContent(json, Encoding.UTF8, "application/json"));
+
+internal async Task<HttpResponseMessage> PutAsJsonAsync(string uri, string json)
+  => await Client.PutAsync(uri, new StringContent(json, Encoding.UTF8, "application/json"));
+
+internal async Task<HttpResponseMessage> DeleteAsJsonAsync(string uri, string json)
+{
+  HttpRequestMessage request = new HttpRequestMessage
+  {
+    Content = new StringContent(json, Encoding.UTF8, "application/json"),
+    Method = HttpMethod.Delete,
+    RequestUri = new Uri(uri)
+  };
+  return await Client.SendAsync(request);
+}
+
+Add the public methods to Get, Add, Update, and Delete entities:
+public async Task<IList<TEntity>> GetAllEntitiesAsync()
+{
+  var response = await Client.GetAsync($"{ApiSettings.Uri}{_endPoint}?v={ApiVersion}");
+  response.EnsureSuccessStatusCode();
+  var result = await response.Content.ReadFromJsonAsync<IList<TEntity>>();
+  return result;
+}
+public async Task<TEntity> GetEntityAsync(int id)
+{
+  var response = await Client.GetAsync($"{ApiSettings.Uri}{_endPoint}/{id}?v={ApiVersion}");
+  response.EnsureSuccessStatusCode();
+  var result = await response.Content.ReadFromJsonAsync<TEntity>();
+  return result;
+}
+public async Task<TEntity> AddEntityAsync(TEntity entity)
+{
+  var response = await PostAsJsonAsync($"{ApiSettings.Uri}{_endPoint}?v={ApiVersion}",
+    JsonSerializer.Serialize(entity,JsonOptions));
+  if (response == null)
+  {
+    throw new Exception("Unable to communicate with the service");
+  }
+  var location = response.Headers?.Location?.OriginalString;
+  return await response.Content.ReadFromJsonAsync<TEntity>() ?? await GetEntityAsync(entity.Id);
+}
+public async Task<TEntity> UpdateEntityAsync(TEntity entity)
+{
+  var response = 
+    await PutAsJsonAsync($"{ApiSettings.Uri}{_endPoint}/{entity.Id}?v={ApiVersion}",
+      JsonSerializer.Serialize(entity,JsonOptions));
+  response.EnsureSuccessStatusCode();
+  return await response.Content.ReadFromJsonAsync<TEntity>() ?? await GetEntityAsync(entity.Id);
+}
+public async Task DeleteEntityAsync(TEntity entity)
+{
+  var response =
+    await DeleteAsJsonAsync($"{ApiSettings.Uri}{_endPoint}/{entity.Id}?v={ApiVersion}",
+      JsonSerializer.Serialize(entity,JsonOptions));
+  response.EnsureSuccessStatusCode();
+}
+
+Add the following global usings to the GlobalUsings.cs file if it does not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using AutoLot.Blazor.Services.ApiWrapper.Base;
+
+Create a new file named CarApiServiceWrapper.cs in the ApiWrapper folder, inherit from ApiServiceWrapperBase with type equal Car, 
+and implement ICarApiServiceWrapper. For the GetCarsByMakeAsync, use the following:
+  public async Task<IList<Car>> GetCarsByMakeAsync(int id)
+  {
+    var response = await Client.GetAsync(
+      $"{ApiSettings.Uri}{ApiSettings.CarBaseUri}/bymake/{id}?v={ApiVersion}");
+    response.EnsureSuccessStatusCode();
+    var result = await response.Content.ReadFromJsonAsync<IList<Car>>();
+    return result;
+  }
+}
+
+Create a new file named MakeApiServiceWrapper.cs in the ApiWrapper folder, inherit from ApiServiceWrapperBase with type equal Make, 
+and implement ICarApiServiceWrapper. 
+
+Create a new file named CarApiDataService.cs in the Services folder that takes an instance of ICarApiServiceWrapper (serviceWrapper) 
+in the primary constructor and implements ICarDataService. 
+Create an internal method named CreateCleanCar that takes a Car (entity) as a parameter and returns a new Car instance that removes the 
+navigation properties.
+Implement all of the interface methods by calling the corresponding method on the serviceWrapper instance making sure to call CreateCleanCar 
+where appropriate to avoid sending navigation properties to the API.
+
+Create a new file named MakeApiDataService.cs in the Services folder that takes an instance of IMakeApiServiceWrapper (serviceWrapper) 
+in the primary constructor and implements IMakeDataService. 
+Create an internal method named CreateCleanMake that takes a Make (entity) as a parameter and returns a new Make instance that removes the 
+navigation properties.
+Implement all of the interface methods by calling the corresponding method on the serviceWrapper instance making sure to call CreateCleanMake 
+where appropriate to avoid sending navigation properties to the API.
+
+Remove the following from Program.cs if it exists:
+builder.Services.AddScoped(
+  sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+builder.Services.AddScoped<ICarDataService, CarDataService>();
+builder.Services.AddScoped<IMakeDataService, MakeDataService>();
+
+Add the following to Program.cs to register the new services (don't remove any existing entries):
+builder.Services.Configure<ApiServiceSettings>(
+  builder.Configuration.GetSection(nameof(ApiServiceSettings)));
+builder.Services.AddHttpClient<ICarApiServiceWrapper, CarApiServiceWrapper>();
+builder.Services.AddHttpClient<IMakeApiServiceWrapper, MakeApiServiceWrapper>();
+if (builder.Configuration.GetValue<bool>("UseApi"))
+{
+  builder.Services.AddScoped<ICarDataService, CarApiDataService>();
+  builder.Services.AddScoped<IMakeDataService, MakeApiDataService>();
+}
+else
+{
+  builder.Services.AddScoped<ICarDataService, CarDataService>();
+  builder.Services.AddScoped<IMakeDataService, MakeDataService>();
+}
+
+Add the following to appsettings.Development.json and appsettings.Staging.json files:
+  "UseApi": true,
+  "ApiServiceSettings": {
+    "Uri": "https://localhost:5011/",
+    "CarBaseUri": "api/Cars",
+    "MakeBaseUri": "api/Makes",
+    "MajorVersion": 1,
+    "MinorVersion": 0,
+    "Status": ""
+  }

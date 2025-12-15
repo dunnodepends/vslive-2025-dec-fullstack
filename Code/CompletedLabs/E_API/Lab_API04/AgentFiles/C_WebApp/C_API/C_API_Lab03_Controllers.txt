@@ -1,0 +1,38 @@
+Always use file scoped namespaces. Always combine attributes on a single line when possible. 
+The project does not use nullable reference types. 
+There is a GlobalUsings.cs file that includes common usings, don't include using statements in new files if they are already in the globalusings.cs file.
+I prefer expression bodied members when possible. Single line if statements should still use braces. Use ternary operators when appropriate. 
+Use internal over private. All classes and methods are public unless told otherwise. Don't add a constructor unless instructed to do so. 
+Use primary constructors when possible and don't declare a class level variable if the parameter from the constructor can be used.
+Don't initialize properties unless instructed to do so.
+
+All work is to be done in the Autolot.API project.
+
+In the Controllers folder, add a new folder named Base and add a new public abstract class named BaseCrudController that inherits from ControllerBase. 
+Make it generic with TEntity, constrained to BaseEntity, new(). Add the ApiController and Route (api/controller) attributes to the top of the class. 
+Accept two parameters in the constructor, IAppLogging (appLogging) and IBaseRepo<TEntity> (baseRepo). 
+Assign the parameters to two protected readonly properties named AppLoggingInstance and MainRepoInstance, respectively. 
+
+Add the following public virtial action methods:
+HttpGet GetAll - (input:none. return type: ActionResult<List<TEntity>>. Logic: return Ok(MainRepoInstance.GetAllIgnoreQueryFilters.ToList()))
+HttpGet("{id}") GetOne -  (input int. return ActionResult<TEntity>. Logic: call MainRepoInstance.Find(id). If Entity is null, return NoContent(). Else return Ok(entity)
+HttpPut("{id}") UpdateOne (input int id, TEntity entity. return ActionResult<TEntity>. 
+Logic: if id != entity.Id, return BadRequest, if ModelState is not valid, return ValidationProblem(ModelState). 
+Else call MainRepoInstance.Update with entity, then return Ok(entity)
+HttpPost() AddOne (input TEntity entity. return ActionResult<TEntity>. 
+Logic: if ModelState is not valid, return ValidationProblem(ModelState) else call MainRepoInstance.Add with entity, 
+then return CreatedAtAction(nameof(GetOne),new {id = entity.Id},entity))
+HttpDelete("{id}) DeleteOne (input int id. return IActionResult. Logic: If id != entity.Id, return BadRequest. Else call Delete on MainRepoInstance. return Ok(entity)
+
+Add the following global usings to the GlobalUsings.cs file if it does not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using AutoLot.Api.Controllers.Base;
+
+Add a new class CarsController to the controllers folder that inherits from BaseCrudController with TEntity as Car and ICarRepo as BaseRepo<TEntity>.
+Don't need the ApiController or Route attributes on this class since they are in the base class.
+Add the following method:
+HttpGet("bymake/{makeId?}") ByMake (input int? makeId. if makeId.HasValue and is greater than zero, return Ok(cast MainRepoInstance to ICarRepo and call GetAllBy passing in the makeId.Value). 
+Else return GetAll())
+
+Add a new class for each entity (CarDriver, Driver, make,and Radio) name <EntityName>sController to the controllers folder that inherit from 
+BaseCrudController with TEntity as <entityType> and I<EntityType>Repo as BaseRepo<TEntity>.
+Don't need the ApiController or Route attributes on this class since they are in the base class.

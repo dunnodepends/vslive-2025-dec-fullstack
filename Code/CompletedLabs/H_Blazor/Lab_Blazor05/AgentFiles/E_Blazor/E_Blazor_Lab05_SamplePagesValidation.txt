@@ -1,0 +1,80 @@
+Always use file scoped namespaces. Always combine attributes on a single line when possible. The project does not use nullable reference types. 
+If there is a GlobalUsings.cs file, don't include using statements in new files if they are already in the globalusings.cs file.
+I prefer expression bodied members when possible. Single line if statements should still use braces. Use ternary operators when appropriate. 
+Use internal over private. All classes and methods are public unless told otherwise. Don't add a constructor unless instructed to do so. 
+Use primary constructors when possible and don't declare a class level variable if the parameter from the constructor can be used.
+Don't initialize properties unless instructed to do so. The @code block in razor components should be at the bottom of the file.
+
+All work is to be done in the AutoLot.Blazor project.
+
+Add the following to the _Imports.razor file (don't remove any existing entries):
+@using AutoLot.Blazor.Models.Validation
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Sections
+@using Microsoft.Extensions.Options
+
+Remove the About menu item from MainLayout.razor.
+
+Add a sectionoutlet to MainLayout.razor with the section name of "top-bar" just above the <artical class="content px-4"> entry.
+
+Clear out the Home.razor file and replace it with the following content:
+@page "/"
+@page "/home"
+@inject IOptionsSnapshot<DealerInfo> DealerOptionsSnapshot
+<h3 class="text-center">@DealerOptionsSnapshot.Value.City, @DealerOptionsSnapshot. Value.State</h3>
+<SectionContent SectionName="top-bar">
+  <h2 class="text-center">@DealerOptionsSnapshot.Value.DealerName</h2>
+</SectionContent>
+
+Replace the "AutoLot.Blazor" text in the NavMenu.razor component with the following "@DealerOptionsSnapshot.Value.DealerName" 
+and inject the IOptionsSnapshot<DealerInfo> service at the top of the file. The navbar-brand should word wrap.
+
+Add the following global usings to the GlobalUsings.cs file if it does not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using Microsoft.Extensions.Validation;
+global using Microsoft.AspNetCore.Components.Forms;
+
+Update the Program.cs file by adding in the following two lines (and not removing any existing lines):
+builder.Services.AddModelValidation();
+builder.Services.AddValidation();
+
+Add the following to the NavMenu.razor component markup:
+<div class="nav-item px-3">
+  <NavLink class="nav-link" @onclick="() => _expandValidationSubNav = !_expandValidationSubNav">
+    <span class="fa-solid fa-check pe-2" aria-hidden="true"></span>
+    Validation
+    <span class="fa-solid fa-sort-down ps-1" aria-hidden="true" hidden="@(_expandValidationSubNav)"></span>
+    <span class="fa-solid fa-sort-up ps-1" aria-hidden="true" hidden="@(!_expandValidationSubNav)"></span>
+  </NavLink>
+  @if (_expandValidationSubNav)
+  {
+    <NavLink class="nav-link ps-5" href="/validations/shopping-cart" Match="NavLinkMatch.All">
+      <span class="fa-solid fa-cart-shopping pe-2" aria-hidden="true"></span>
+      Shopping Cart
+    </NavLink>
+    <NavLink class="nav-link ps-5" href="/validations/car-validation" Match="NavLinkMatch.All">
+      <span class="fa-solid fa-car pe-2" aria-hidden="true"></span>
+      Car
+    </NavLink>
+  }
+</div>
+Add the following to the NavMenu.razor @code block:
+private bool _expandValidationSubNav;
+
+Create a new folder named Validation in the Services folder, and in that folder create class named CustomFieldClassProvider that inherits from FieldCssClassProvider. 
+Override the GetFieldCssClass method to return "validField" if the field is valid and "invalidField" if the field is invalid.
+
+Add the following CSS classes to app.css:
+.invalidField {
+    outline: 1px solid red;
+}
+.validField {
+    outline: 1px solid green;
+}
+
+Add the following global usings to the GlobalUsings.cs file if it does not already exist (sorted alphabetically. Don't remove any existing global using statements).
+global using AutoLot.Blazor.Services.Validation;
+
+
+
+
+

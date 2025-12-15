@@ -1,0 +1,7 @@
+﻿@page "/"
+@page "/home"
+@inject IOptionsSnapshot<DealerInfo> DealerOptionsSnapshot
+<h3 class="text-center">@DealerOptionsSnapshot.Value.City, @DealerOptionsSnapshot.Value.State</h3>
+<SectionContent SectionName="top-bar">
+  <h2 class="text-center">@DealerOptionsSnapshot.Value.DealerName</h2>
+</SectionContent>

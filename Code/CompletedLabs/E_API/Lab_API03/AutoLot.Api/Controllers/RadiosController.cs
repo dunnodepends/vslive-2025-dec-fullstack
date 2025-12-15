@@ -1,0 +1,11 @@
+﻿// Copyright Information
+// ==================================
+// AutoLot - AutoLot.Api - RadiosController.cs
+// All samples copyright Philip Japikse
+// http://www.skimedic.com 2025/12/04
+// ==================================
+
+namespace AutoLot.Api.Controllers;
+
+public class RadiosController(IAppLogging appLogging, IRadioRepo repo)
+    : BaseCrudController<Radio>(appLogging, repo);

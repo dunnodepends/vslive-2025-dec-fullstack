@@ -15,13 +15,13 @@ Add the following to the _Imports.razor file (don't remove any existing entries)
 
 Remove the About menu item from MainLayout.razor.
 
-Add a sectionoutlet to MainLayout.razor with the section name of "top-bar" just above the <artical class="content px-4"> entry.
+Add a sectionoutlet to MainLayout.razor with the sectionname of "top-bar" just above the <article class="content px-4"> entry.
 
 Clear out the Home.razor file and replace it with the following content:
 @page "/"
 @page "/home"
 @inject IOptionsSnapshot<DealerInfo> DealerOptionsSnapshot
-<h3 class="text-center">@DealerOptionsSnapshot.Value.City, @DealerOptionsSnapshot. Value.State</h3>
+<h3 class="text-center">@DealerOptionsSnapshot.Value.City, @DealerOptionsSnapshot.Value.State</h3>
 <SectionContent SectionName="top-bar">
   <h2 class="text-center">@DealerOptionsSnapshot.Value.DealerName</h2>
 </SectionContent>

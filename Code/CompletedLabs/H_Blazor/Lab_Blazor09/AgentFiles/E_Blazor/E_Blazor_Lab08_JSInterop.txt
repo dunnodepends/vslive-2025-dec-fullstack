@@ -37,9 +37,9 @@ Implement the interface methods as follows:
     return json == null ? default : JsonSerializer.Deserialize<TItem>(json);
   }
 
-Add a new class named LocalStorageService.cs in the Services\Storage directory, inherit from IBrowserStorage, and take an instance of IJSRuntime in the primary constructor.
+Add a new class named SessionStorageService.cs in the Services\Storage directory, inherit from IBrowserStorage, and take an instance of IJSRuntime in the primary constructor.
 Implement the interface methods as follows:
-  public async Task SetItemAsync(string key, T item)
+  public async Task SetItemAsync(string key, TItem item)
   {
     await jsRuntime.InvokeVoidAsync(
       "skimedicInterop.setSessionStorage", key, JsonSerializer.Serialize(item));
